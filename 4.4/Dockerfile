@@ -105,7 +105,17 @@ RUN mkdir -p /data/db /data/configdb \
 VOLUME /data/db /data/configdb
 
 COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-healthcheck.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
+
+# During 'start period' failures are ignored and we
+# can still be listed as 'starting' (until the first success
+# happens). Default is 0s, which is no good for mongo as it
+# can take a minute to get started, especially on the first
+# ever launch. So we allow up to 90s for the database to be
+# "starting" - after that any failures of the healthcheck will
+# transition us to the "failed" state
+HEALTHCHECK --start-period=90s CMD /usr/local/bin/docker-healthcheck.sh || exit 1
 
 EXPOSE 27017
 CMD ["mongod"]
